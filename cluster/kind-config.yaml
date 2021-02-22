@@ -1,0 +1,56 @@
+# this config file contains all config fields with comments
+# NOTE: this is not a particularly useful config file
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+  disableDefaultCNI: true
+  podSubnet: "10.20.0.0/16"
+  serviceSubnet: "10.200.0.0/16"
+  kubeProxyMode: "ipvs"
+# TokenRequest is required by istio
+featureGates:
+  TokenRequest: true
+  TokenRequestProjection: true
+nodes:
+# the control plane node config
+- role: control-plane
+  kubeadmConfigPatches:
+  - |
+    kind: InitConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+        node-labels: "ingress-ready=true"
+  - |
+    apiVersion: kubeadm.k8s.io/v1beta2
+    kind: ClusterConfiguration
+    metadata:
+      name: config
+    apiServer:
+      extraArgs:
+        "service-account-issuer": "kubernetes.default.svc"
+        "service-account-signing-key-file": "/etc/kubernetes/pki/sa.key"      
+  extraPortMappings:
+  - containerPort: 30000
+    hostPort: 80
+    protocol: TCP
+  - containerPort: 30001
+    hostPort: 443
+    protocol: TCP
+  - containerPort: 30002
+    hostPort: 15021
+    protocol: TCP      
+# the workers
+- role: worker
+  kubeadmConfigPatches:
+  - |
+    kind: JoinConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+        node-labels: "worker1=true"
+- role: worker
+  kubeadmConfigPatches:
+  - |
+    kind: JoinConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+        node-labels: "worker2=true"
